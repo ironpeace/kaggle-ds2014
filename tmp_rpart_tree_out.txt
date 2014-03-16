@@ -1,0 +1,20 @@
+n= 67906 
+
+node), split, n, deviance, yval
+      * denotes terminal node
+
+ 1) root 67906 14233.07000 0.7009984  
+   2) count< 9.5 61792 13396.88000 0.6821919  
+     4) isSingle_duration_previous=false 6905  1719.01600 0.5323678  
+       8) count< 4.5 1296   314.32100 0.4135802 *
+       9) count>=4.5 5609  1382.18200 0.5598146 *
+     5) isSingle_duration_previous=true 54887 11503.37000 0.7010403  
+      10) count< 4.5 8233  2004.13200 0.5810762 *
+      11) count>=4.5 46654  9359.84600 0.7222103 *
+   3) count>=9.5 6114   593.45240 0.8910697  
+     6) maxCost>=654.5 3263   363.70890 0.8722035  
+      12) state=AL,AR,CO,CT,DC,DE,IA,IN,MT,ND,NH,OH,OK,WA,WI 903   129.04980 0.8272425 *
+      13) state=FL,GA,ID,KS,KY,MD,ME,MO,MS,NE,NM,NV,NY,OR,PA,RI,TN,UT,WV,WY 2360   232.13520 0.8894068 *
+     7) maxCost< 654.5 2851   227.25290 0.9126622  
+      14) state=AR,DE,GA,IA,ID,KY,ME,MS,NE,NM,OR,RI,TN,WI,WV 524    61.37977 0.8645038 *
+      15) state=AL,CO,CT,DC,FL,IN,KS,MD,MO,MT,ND,NH,NV,NY,OH,OK,PA,UT,WA,WY 2327   164.38420 0.9235067 *

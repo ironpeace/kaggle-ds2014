@@ -1,0 +1,17 @@
+DB作成
+sqlite3 kaggle.ds2014
+
+テーブル作成
+sqlite3 kaggle.ds2014 < create_table.sql
+
+sqlite3 -separator , kaggle.ds2014 ".import train_non_header.csv history"
+sqlite3 -separator , kaggle.ds2014 ".import groups.csv grouped"
+
+
+
+
+SQL
+
+select count(*) from(select * from history group by customer_ID);
+
+
