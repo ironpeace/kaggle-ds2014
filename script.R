@@ -9,9 +9,6 @@ hist(groups$day)
 summary(groups$state)
 plot(groups$state)
 
-summary(groups$day)
-plot(groups$day)
-
 summary(as.factor(groups$location))
 plot(as.factor(groups$location))
 
@@ -245,7 +242,7 @@ for(i in 1:testlen){
   }else{
     # どちらにもあてはまらない人はえいやで直前見積もりにしてしまう
     test.prob[i] <- as.character(test$evePolicy[i])
-    test.prob.flg[i] <- "eve"
+    test.prob.flg[i] <- "eve2"
     
   }
 }
@@ -254,9 +251,20 @@ table(test.prob.flg)
 
 answer <- data.frame(customer_ID=test$customer_ID, plan=substr(test.prob, 2, 8))
 
+answer3 <- data.frame(customer_ID=test$customer_ID, plan=substr(test$firstPolicy, 2, 8))
+
 write.csv(answer, "answer.csv", row.names=F)
+write.csv(answer3, "answer3.csv", row.names=F)
+
+sum(ifelse(as.character(test$firstPolicy) == as.character(test$evePolicy), 1, 0)) / 55716
+
 # 最後に
 # sed -e 's/\"//g' answer.csv > answer2.csv
 # をして、ダブルクオートを削除して提出
+
+
+train_testStyle <- read.csv("train-testStyle.csv")
+
+
 
 
