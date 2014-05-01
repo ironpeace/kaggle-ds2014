@@ -5,6 +5,7 @@ install.packages("nnet")
 library(nnet)
 library(rpart)
 library(partykit)
+source("calcAR.R")
 
 data <- read.csv("groups.train.csv")
 
@@ -60,6 +61,20 @@ length(which(is.na(data$vD)))
 length(which(is.na(data$vE)))
 length(which(is.na(data$vF)))
 length(which(is.na(data$vG)))
+length(which(is.na(data$vA1)))
+length(which(is.na(data$vB1)))
+length(which(is.na(data$vC1)))
+length(which(is.na(data$vD1)))
+length(which(is.na(data$vE1)))
+length(which(is.na(data$vF1)))
+length(which(is.na(data$vG1)))
+length(which(is.na(data$vA2)))
+length(which(is.na(data$vB2)))
+length(which(is.na(data$vC2)))
+length(which(is.na(data$vD2)))
+length(which(is.na(data$vE2)))
+length(which(is.na(data$vF2)))
+length(which(is.na(data$vG2)))
 length(which(is.na(data$cA)))
 length(which(is.na(data$cB)))
 length(which(is.na(data$cC)))
@@ -75,8 +90,8 @@ data2 <- data
 data2$risk_factor <- ifelse(is.na(data$risk_factor),4,data$risk_factor)
 data2$c_previous <- ifelse(is.na(data$c_previous),1,data$c_previous)
 
-#states <- read.csv("states_data.csv")
-#data3 <- merge(x=data2, y=states, by="state")
+states <- read.csv("states_data.csv")
+data3 <- merge(x=data2, y=states, by="state")
 data3 <- data2
 
 set.seed(12345)
@@ -118,22 +133,44 @@ data.valid.4$cF <- NULL
 data.valid.4$cG <- NULL
 
 # 直前見積もり採用予測モデル
-data.train.isEve.rpart = rpart(as.factor(isEve)~., data=data.train.4, maxdepth=3, cp=-1)
+#data.train.isEve.rpart = rpart(as.factor(isEve)~., data=data.train.4, maxdepth=3, cp=-1)
+data.train.isEve.rpart = rpart(as.factor(isEve)~., data=data.train.4, maxdepth=6, cp=-1, minbucket=1000 )
 plot(as.party(data.train.isEve.rpart))
+
 
 # 直前見積もり採用予測
 data.train.isEve.pred = predict(data.train.isEve.rpart, newdata=data.train)
 data.valid.isEve.pred = predict(data.train.isEve.rpart, newdata=data.valid)
 
-# trainデータヒット率確認
-sum((ifelse(data.train.isEve.pred > 0.5, 1, 0) + data.train$isEve) == 2, 1, 0) / sum(data.train$isEve)
-# 1.000021
-# 100%てことか？
+sum(data.train$isEve) / 67906
+# 0.7018967
 
-sum((ifelse(data.valid.isEve.pred > 0.5, 1, 0) + data.valid$isEve) == 2, 1, 0) / sum(data.valid$isEve)
-# 1.000049
-# 100%てことか？
+# これがひとまず７割くらいにならないと、直前見積もりじゃない人をまったく当てられていないことになる
+sum((ifelse(data.train.isEve.pred[,2] > 0.5, 1, 0))) / 67906
+sum((ifelse(data.valid.isEve.pred[,2] > 0.5, 1, 0))) / 29103
+
+# 直前見積もりじゃない人をどうあてられるかを見てみる
+sum((ifelse(data.train.isEve.pred[,1] > 0.5, 1, 0))) / 67906
+sum((ifelse(data.valid.isEve.pred[,1] > 0.5, 1, 0))) / 29103
+
+
+# trainデータヒット率確認
+sum((ifelse(data.train.isEve.pred[,2] > 0.6, 1, 0) + data.train$isEve) == 2, 1, 0) / sum(data.train$isEve)
+# 0.8153494
+
+calcAR(X=data.train.isEve.pred[,2], y=data.train$isEve, TARGET="1", plotCAP=TRUE, plotpr=TRUE)
+# AR : 0.4038304
+
+sum((ifelse(data.valid.isEve.pred > 0.6, 1, 0) + data.valid$isEve) == 2, 1, 0) / sum(data.valid$isEve)
+# 0.8114609
+
+calcAR(X=data.valid.isEve.pred[,2], y=data.valid$isEve, TARGET="1", plotCAP=TRUE, plotpr=TRUE)
+# AR : 0.3929225
+
 # オーバーフィッティングは無さそう。
+
+
+
 
 # 以降では使わないので消しておく
 data.train.4$isEve <- NULL
@@ -145,21 +182,30 @@ data.train.4A$A <- data.train$vA
 # 3値以上かどうか確認
 summary(as.factor(data.train.4A$A))
 
+# stateが入っているとrpartが終わらないので消しておく
+data.train.4A$state <- NULL
+
 date()
-data.train.4A.multinom <- multinom(as.factor(A)~., data = data.train.4A, MaxNWts=4000, maxit=50)
+#data.train.4A.multinom <- multinom(as.factor(A)~., data = data.train.4A, MaxNWts=4000, maxit=50)
+data.train.4A.rpart = rpart(as.factor(A)~., data=data.train.4A, maxdepth=3, cp=-1)
 date()
 
-data.train.4A.pred <- predict(data.train.4A.multinom, newdata=data.train.4A, type="class")
-data.valid.4A.pred <- predict(data.train.4A.multinom, newdata=data.valid.4, type="class")
+plot(as.party(data.train.4A.rpart))
+
+#data.train.4A.pred <- predict(data.train.4A.multinom, newdata=data.train.4A, type="class")
+#data.valid.4A.pred <- predict(data.train.4A.multinom, newdata=data.valid.4, type="class")
+data.train.4A.pred <- predict(data.train.4A.rpart, newdata=data.train.4A, type="class")
+data.valid.4A.pred <- predict(data.train.4A.rpart, newdata=data.valid.4, type="class")
+
 
 length(which(is.na(data.train.4A.pred)))
 length(which(is.na(data.valid.4A.pred)))
 
 sum(ifelse(data.train.4A.pred == data.train$vA, 1, 0)) / 67906
-# ヒット率 0.7231173
+# ヒット率 0.8380114
 
 sum(ifelse(data.valid.4A.pred == data.valid$vA, 1, 0)) / 29103
-# ヒット率 0.7176236
+# ヒット率 0.8333505
 
 
 # オプションBを予測する
@@ -180,10 +226,10 @@ length(which(is.na(data.train.4B.pred)))
 length(which(is.na(data.valid.4B.pred)))
 
 sum(ifelse(data.train.4B.pred == data.train$vB, 1, 0)) / 67906
-# ヒット率 0.5950137
+# ヒット率 0.8377757
 
 sum(ifelse(data.valid.4B.pred == data.valid$vB, 1, 0)) / 29103
-# ヒット率 0.5913823
+# ヒット率 0.8361337
 
 
 # オプションCを予測する
@@ -193,21 +239,29 @@ data.train.4C$C <- data.train$vC
 # 3値以上かどうか確認
 summary(as.factor(data.train.4C$C))
 
+# stateが入っているとrpart終わらないから消しておく
+data.train.4C$state <- NULL
+
 date()
-data.train.4C.multinom <- multinom(as.factor(C)~., data = data.train.4C, MaxNWts=4400, maxit=50)
+#data.train.4C.multinom <- multinom(as.factor(C)~., data = data.train.4C, MaxNWts=4400, maxit=50)
+data.train.4C.rpart = rpart(as.factor(C)~., data=data.train.4C, maxdepth=3, cp=-1)
 date()
 
-data.train.4C.pred <- predict(data.train.4C.multinom, newdata=data.train.4C, type="class")
-data.valid.4C.pred <- predict(data.train.4C.multinom, newdata=data.valid.4, type="class")
+plot(as.party(data.train.4C.rpart))
+
+#data.train.4C.pred <- predict(data.train.4C.multinom, newdata=data.train.4C, type="class")
+#data.valid.4C.pred <- predict(data.train.4C.multinom, newdata=data.valid.4, type="class")
+data.train.4C.pred <- predict(data.train.4C.rpart, newdata=data.train.4C, type="class")
+data.valid.4C.pred <- predict(data.train.4C.rpart, newdata=data.valid.4, type="class")
 
 length(which(is.na(data.train.4C.pred)))
 length(which(is.na(data.valid.4C.pred)))
 
 sum(ifelse(data.train.4C.pred == data.train$vC, 1, 0)) / 67906
-# ヒット率 0.6322269
+# ヒット率 0.8044944
 
 sum(ifelse(data.valid.4C.pred == data.valid$vC, 1, 0)) / 29103
-# ヒット率 0.6306223
+# ヒット率 0.7997801
 
 
 
@@ -218,22 +272,28 @@ data.train.4D$D <- data.train$vD
 # 3値以上かどうか確認
 summary(as.factor(data.train.4D$D))
 
-date()
-data.train.4D.multinom <- multinom(as.factor(D)~., data = data.train.4D, MaxNWts=4000, maxit=50)
-date()
-# 15分かかる
+data.train.4D$state <- NULL
 
-data.train.4D.pred <- predict(data.train.4D.multinom, newdata=data.train.4D, type="class")
-data.valid.4D.pred <- predict(data.train.4D.multinom, newdata=data.valid.4, type="class")
+date()
+#data.train.4D.multinom <- multinom(as.factor(D)~., data = data.train.4D, MaxNWts=4000, maxit=50)
+data.train.4D.rpart = rpart(as.factor(D)~., data=data.train.4D, maxdepth=3, cp=-1)
+date()
+
+plot(as.party(data.train.4D.rpart))
+
+#data.train.4D.pred <- predict(data.train.4D.multinom, newdata=data.train.4D, type="class")
+#data.valid.4D.pred <- predict(data.train.4D.multinom, newdata=data.valid.4, type="class")
+data.train.4D.pred <- predict(data.train.4D.rpart, newdata=data.train.4D, type="class")
+data.valid.4D.pred <- predict(data.train.4D.rpart, newdata=data.valid.4, type="class")
 
 length(which(is.na(data.train.4D.pred)))
 length(which(is.na(data.valid.4D.pred)))
 
 sum(ifelse(data.train.4D.pred == data.train$vD, 1, 0)) / 67906
-# ヒット率 0.6785704
+# ヒット率 0.8505581
 
 sum(ifelse(data.valid.4D.pred == data.valid$vD, 1, 0)) / 29103
-# ヒット率 0.6837096
+# ヒット率 0.8508058
 
 
 # オプションEを予測する
@@ -254,10 +314,10 @@ length(which(is.na(data.train.4E.pred)))
 length(which(is.na(data.valid.4E.pred)))
 
 sum(ifelse(data.train.4E.pred == data.train$vE, 1, 0)) / 67906
-# ヒット率 0.6641534
+# ヒット率 0.8363031
 
 sum(ifelse(data.valid.4E.pred == data.valid$vE, 1, 0)) / 29103
-# ヒット率 0.6665292
+# ヒット率 0.836443
 
 
 
@@ -268,21 +328,28 @@ data.train.4F$F <- data.train$vF
 # 3値以上かどうか確認
 summary(as.factor(data.train.4F$F))
 
+data.train.4F$state <- NULL
+
 date()
-data.train.4F.multinom <- multinom(as.factor(F)~., data = data.train.4F, MaxNWts=4400, maxit=50)
+#data.train.4F.multinom <- multinom(as.factor(F)~., data = data.train.4F, MaxNWts=4400, maxit=50)
+data.train.4F.rpart = rpart(as.factor(F)~., data=data.train.4F, maxdepth=3, cp=-1)
 date()
 
-data.train.4F.pred <- predict(data.train.4F.multinom, newdata=data.train.4F, type="class")
-data.valid.4F.pred <- predict(data.train.4F.multinom, newdata=data.valid.4, type="class")
+plot(as.party(data.train.4F.rpart))
+
+#data.train.4F.pred <- predict(data.train.4F.multinom, newdata=data.train.4F, type="class")
+#data.valid.4F.pred <- predict(data.train.4F.multinom, newdata=data.valid.4, type="class")
+data.train.4F.pred <- predict(data.train.4F.rpart, newdata=data.train.4F, type="class")
+data.valid.4F.pred <- predict(data.train.4F.rpart, newdata=data.valid.4, type="class")
 
 length(which(is.na(data.train.4F.pred)))
 length(which(is.na(data.valid.4F.pred)))
 
 sum(ifelse(data.train.4F.pred == data.train$vF, 1, 0)) / 67906
-# ヒット率 0.6159544
+# ヒット率 0.825818
 
 sum(ifelse(data.valid.4F.pred == data.valid$vF, 1, 0)) / 29103
-# ヒット率 0.6184586
+# ヒット率 0.8245885
 
 
 
@@ -293,44 +360,50 @@ data.train.4G$G <- data.train$vG
 # 3値以上かどうか確認
 summary(as.factor(data.train.4G$G))
 
+data.train.4G$state <- NULL
+
 date()
-data.train.4G.multinom <- multinom(as.factor(G)~., data = data.train.4G, MaxNWts=4400, maxit=50)
+#data.train.4G.multinom <- multinom(as.factor(G)~., data = data.train.4G, MaxNWts=4400, maxit=50)
+data.train.4G.rpart = rpart(as.factor(G)~., data=data.train.4G, maxdepth=3, cp=-1)
 date()
 
-data.train.4G.pred <- predict(data.train.4G.multinom, newdata=data.train.4G, type="class")
-data.valid.4G.pred <- predict(data.train.4G.multinom, newdata=data.valid.4, type="class")
+plot(as.party(data.train.4G.rpart))
+
+#data.train.4G.pred <- predict(data.train.4G.multinom, newdata=data.train.4G, type="class")
+#data.valid.4G.pred <- predict(data.train.4G.multinom, newdata=data.valid.4, type="class")
+data.train.4G.pred <- predict(data.train.4G.rpart, newdata=data.train.4G, type="class")
+data.valid.4G.pred <- predict(data.train.4G.rpart, newdata=data.valid.4, type="class")
 
 length(which(is.na(data.train.4G.pred)))
 length(which(is.na(data.valid.4G.pred)))
 
 sum(ifelse(data.train.4G.pred == data.train$vG, 1, 0)) / 67906
-# ヒット率 0.597473
+# ヒット率 0.7465025
 
 sum(ifelse(data.valid.4G.pred == data.valid$vG, 1, 0)) / 29103
-# ヒット率 0.5904202
+# ヒット率 0.7423977
 
 data.train.plan <- paste(data.train$vA,data.train$vB,data.train$vC,data.train$vD,data.train$vE,data.train$vF,data.train$vG,sep="")
 
 data.train.plan.pred <- paste(data.train.4A.pred,data.train.4B.pred,data.train.4C.pred,data.train.4D.pred,data.train.4E.pred,data.train.4F.pred,data.train.4G.pred,sep="")
 
 sum(ifelse(data.train.plan == data.train.plan.pred, 1, 0)) / 67906
-# ヒット率 0.05183636
+# ヒット率 0.4116131
 
 data.valid.plan <- paste(data.valid$vA,data.valid$vB,data.valid$vC,data.valid$vD,data.valid$vE,data.valid$vF,data.valid$vG, sep="")
 
 data.valid.plan.pred <- paste(data.valid.4A.pred,data.valid.4B.pred,data.valid.4C.pred,data.valid.4D.pred,data.valid.4E.pred,data.valid.4F.pred,data.valid.4G.pred, sep="")
 
 sum(ifelse(data.valid.plan == data.valid.plan.pred, 1, 0)) / 29103
+# ヒット率 0.4076899
 
-# ヒット率 0.05281242
-
-# ヒット率低すぎる…
+# ヒット率かなりあがった（5%周辺だった）
 
 #ひとまずファイル出力しておく
-write.csv(data.train.plan.pred, "data.train.plan.pred_20140422_1.csv")
-write.csv(data.valid.plan.pred, "data.valid.plan.pred_20140422_1.csv")
+write.csv(data.train.plan.pred, "data.train.plan.pred_20140430_1.csv")
+write.csv(data.valid.plan.pred, "data.valid.plan.pred_20140430_1.csv")
 
-# ヒット率低すぎたけど、ニアミスが多いのではないかと想定して、ニアミス度合いを確認する
+# ニアミスが多いのではないかと想定して、ニアミス度合いを確認する
 
 data.train.4A.pred.wrong <- ifelse(data.train.4A.pred != data.train$vA, 1, 0)
 data.train.4B.pred.wrong <- ifelse(data.train.4B.pred != data.train$vB, 1, 0)
@@ -352,8 +425,8 @@ hist(data.train.pred.howWrong)
 pie(table(data.train.pred.howWrong))
 
 sum(ifelse(data.train.pred.howWrong < 3,1,0)) / 67906
-# 0.5307631
-# ２個間違え以下が半数なので、やはり結構ニアミスしていると言える。
+# 0.8125202
+# 8割がたニアミス！
 
 data.valid.4A.pred.wrong <- ifelse(data.valid.4A.pred != data.valid$vA, 1, 0)
 data.valid.4B.pred.wrong <- ifelse(data.valid.4B.pred != data.valid$vB, 1, 0)
@@ -375,7 +448,7 @@ hist(data.valid.pred.howWrong)
 pie(table(data.valid.pred.howWrong))
 
 sum(ifelse(data.valid.pred.howWrong < 3,1,0)) / 29103
-# 0.5313198
+# 0.8099165
 # validを見ても同様のことが言える。
 
 # 間違ったオプションが、もし顧客にとって悩んでいないオプションであれば、
@@ -391,7 +464,7 @@ sum(ifelse((data.train.4D.pred.wrong + ifelse(data.train$cD == 0, 1, 0)) == 2, 1
 sum(ifelse((data.train.4E.pred.wrong + ifelse(data.train$cE == 0, 1, 0)) == 2, 1, 0)) / sum(data.train.4E.pred.wrong)
 sum(ifelse((data.train.4F.pred.wrong + ifelse(data.train$cF == 0, 1, 0)) == 2, 1, 0)) / sum(data.train.4F.pred.wrong)
 sum(ifelse((data.train.4G.pred.wrong + ifelse(data.train$cG == 0, 1, 0)) == 2, 1, 0)) / sum(data.train.4G.pred.wrong)
-# 40% 〜 60% が該当。
+# 予測が間違ったオプションはほとんど悩んでいる
 
 sum(ifelse((data.valid.4A.pred.wrong + ifelse(data.valid$cA == 0, 1, 0)) == 2, 1, 0)) / sum(data.valid.4A.pred.wrong)
 sum(ifelse((data.valid.4B.pred.wrong + ifelse(data.valid$cB == 0, 1, 0)) == 2, 1, 0)) / sum(data.valid.4B.pred.wrong)
@@ -400,13 +473,13 @@ sum(ifelse((data.valid.4D.pred.wrong + ifelse(data.valid$cD == 0, 1, 0)) == 2, 1
 sum(ifelse((data.valid.4E.pred.wrong + ifelse(data.valid$cE == 0, 1, 0)) == 2, 1, 0)) / sum(data.valid.4E.pred.wrong)
 sum(ifelse((data.valid.4F.pred.wrong + ifelse(data.valid$cF == 0, 1, 0)) == 2, 1, 0)) / sum(data.valid.4F.pred.wrong)
 sum(ifelse((data.valid.4G.pred.wrong + ifelse(data.valid$cG == 0, 1, 0)) == 2, 1, 0)) / sum(data.valid.4G.pred.wrong)
-# valid も 40% 〜 70% が該当。
+# 予測が間違ったオプションはほぼ全て悩んでいる
+
 
 # ここで作戦を整理。
 # 1. まずは直前見積もり採用モデルで予測する
 # 2. 各オプションの予測モデルを作る（なるべく精度を挙げて行く）
-# 3. 悩んでいないオプションであれば、予測モデルは使わない
-# 4. 悩んでいるオプションであれば、予測モデルを使う
+# 3. 悩んでいないオプションであれば、予測モデルを使う
 
 # 悩んでいるオプションであれば予測モデルを使い、そうでなければ今のをそのまま使う
 data.train.4A.final <- ifelse(data.train$cA == 0, data.train$vA, data.train.4A.pred)
@@ -428,8 +501,7 @@ data.train.plan.pred.retry <- paste(data.train.4A.final,
                                     sep="")
 
 sum(ifelse(data.train.plan == data.train.plan.pred.retry, 1, 0)) / 67906
-# 0.2717138
-# ヒット率上がった。
+# 0.2802698
 
 # 悩んでいるオプションであれば予測モデルを使い、そうでなければ今のをそのまま使う
 data.valid.4A.final <- ifelse(data.valid$cA == 0, data.valid$vA, data.valid.4A.pred)
@@ -451,8 +523,7 @@ data.valid.plan.pred.retry <- paste(data.valid.4A.final,
                                     sep="")
 
 sum(ifelse(data.valid.plan == data.valid.plan.pred.retry, 1, 0)) / 29103
-# 0.2698347
-# validでも上がった。
+# 0.2779095
 
 # トータルでのモデル適用をやってみる
 answer.train <- data.frame(customer_ID=data.train$customer_ID)
@@ -463,11 +534,22 @@ data.train.plan.eve <- paste(data.train$vA, data.train$vB, data.train$vC,
                              data.train$vG, sep="")
 
 # 直前見積もり予測先であれば、直前見積もりplanを採用し、さもなければオプション毎予測モデルを適用
-answer.train$plan <- ifelse(data.train.isEve.pred > 0.5, data.train.plan.eve, data.train.plan.pred.retry)
-
+answer.train$plan <- ifelse(data.train.isEve.pred[,2] > 0.6, data.train.plan.eve, data.train.plan.pred.retry)
 sum(ifelse(data.train.plan == answer.train$plan, 1, 0)) / 67906
-# 1.271714
-# ん？
+# 0.7628339
+
+# ニアミス補正しない方を使ってみる
+answer.train$plan <- ifelse(data.train.isEve.pred[,2] > 0.6, data.train.plan.eve, data.train.plan.pred)
+sum(ifelse(data.train.plan == answer.train$plan, 1, 0)) / 67906
+# 0.8024475
+
+# shopping_pt==2 が無いデータは一律、直前見積もりにしてみる。
+answer.train$plan <- ifelse(is.na(data.train$vA2), data.train.plan.eve, 
+                           ifelse(data.train.isEve.pred[,2] > 0.5, data.train.plan.eve, data.train.plan.pred))
+sum(ifelse(data.train.plan == answer.train$plan, 1, 0)) / 67906
+# 0.9701941
+
+
 
 # validデータでもやってみる
 answer.valid <- data.frame(customer_ID=data.valid$customer_ID)
@@ -478,15 +560,28 @@ data.valid.plan.eve <- paste(data.valid$vA, data.valid$vB, data.valid$vC,
                              data.valid$vG, sep="")
 
 # 直前見積もり予測先であれば、直前見積もりplanを採用し、さもなければオプション毎予測モデルを適用
-answer.valid$plan <- ifelse(data.valid.isEve.pred > 0.5, data.valid.plan.eve, data.valid.plan.pred.retry)
-
+answer.valid$plan <- ifelse(data.valid.isEve.pred[,2] > 0.6, data.valid.plan.eve, data.valid.plan.pred.retry)
 sum(ifelse(data.valid.plan == answer.valid$plan, 1, 0)) / 29103
-# 1.269835
-# ん？
+# 0.7600935
+
+# ニアミス補正しない方を使ってみる
+answer.valid$plan <- ifelse(data.valid.isEve.pred[,2] > 0.6, data.valid.plan.eve, data.valid.plan.pred)
+sum(ifelse(data.valid.plan == answer.valid$plan, 1, 0)) / 29103
+# 0.8000206
+
+# shopping_pt==2 が無いデータは一律、直前見積もりにしてみる。
+answer.valid$plan <- ifelse(is.na(data.valid$vA2), data.valid.plan.eve, 
+                            ifelse(data.valid.isEve.pred[,2] > 0.5, data.valid.plan.eve, data.valid.plan.pred))
+sum(ifelse(data.valid.plan == answer.valid$plan, 1, 0)) / 67906
+# 0.4155597
+# オーバーフィッティングか〜
+
+
 
 # さていよいよテストデータに対してやってみる
 
 test <- read.csv("groups.test.csv")
+test <- merge(x=test, y=states, by="state")
 
 test$isSingle_state <- NULL
 test$isSingle_location <- NULL
@@ -537,6 +632,20 @@ length(which(is.na(test$vD)))
 length(which(is.na(test$vE)))
 length(which(is.na(test$vF)))
 length(which(is.na(test$vG)))
+length(which(is.na(test$vA1)))
+length(which(is.na(test$vB1)))
+length(which(is.na(test$vC1)))
+length(which(is.na(test$vD1)))
+length(which(is.na(test$vE1)))
+length(which(is.na(test$vF1)))
+length(which(is.na(test$vG1)))
+length(which(is.na(test$vA2)))
+length(which(is.na(test$vB2)))
+length(which(is.na(test$vC2)))
+length(which(is.na(test$vD2)))
+length(which(is.na(test$vE2)))
+length(which(is.na(test$vF2)))
+length(which(is.na(test$vG2)))
 length(which(is.na(test$cA)))
 length(which(is.na(test$cB)))
 length(which(is.na(test$cC)))
@@ -579,7 +688,7 @@ test.4$cG <- NULL
 
 test.4A <- test.4
 test.4A$A <- test$vA
-test.4A.pred <- predict(data.train.4A.multinom, newdata=test.4A, type="class")
+test.4A.pred <- predict(data.train.4A.rpart, newdata=test.4A, type="class")
 length(which(is.na(test.4A.pred)))
 
 test.4B <- test.4
@@ -589,12 +698,12 @@ length(which(is.na(test.4B.pred)))
 
 test.4C <- test.4
 test.4C$C <- test$vC
-test.4C.pred <- predict(data.train.4C.multinom, newdata=test.4C, type="class")
+test.4C.pred <- predict(data.train.4C.rpart, newdata=test.4C, type="class")
 length(which(is.na(test.4C.pred)))
 
 test.4D <- test.4
 test.4D$D <- test$vD
-test.4D.pred <- predict(data.train.4D.multinom, newdata=test.4D, type="class")
+test.4D.pred <- predict(data.train.4D.rpart, newdata=test.4D, type="class")
 length(which(is.na(test.4D.pred)))
 
 test.4E <- test.4
@@ -604,12 +713,12 @@ length(which(is.na(test.4E.pred)))
 
 test.4F <- test.4
 test.4F$F <- test$vF
-test.4F.pred <- predict(data.train.4F.multinom, newdata=test.4F, type="class")
+test.4F.pred <- predict(data.train.4F.rpart, newdata=test.4F, type="class")
 length(which(is.na(test.4F.pred)))
 
 test.4G <- test.4
 test.4G$G <- test$vG
-test.4G.pred <- predict(data.train.4G.multinom, newdata=test.4G, type="class")
+test.4G.pred <- predict(data.train.4G.rpart, newdata=test.4G, type="class")
 length(which(is.na(test.4G.pred)))
 
 # 悩んでいるオプションであれば予測モデルを使い、そうでなければ今のをそのまま使う
@@ -630,11 +739,24 @@ test.plan.eve <- paste(test$vA, test$vB, test$vC, test$vD, test$vE, test$vF, tes
 
 # 直前見積もり予測先であれば、直前見積もりplanを採用し、さもなければオプション毎予測モデルを適用
 answer.test <- data.frame(customer_ID=test$customer_ID)
-answer.test$plan <- ifelse(test.isEve.pred[,2] > 0.5, test.plan.eve, test.plan.pred.retry)
+answer.test$plan <- ifelse(test.isEve.pred[,2] > 0.6, test.plan.eve, test.plan.pred.retry)
 
-write.csv(answer.test, "answer_20140422_1.csv", quote=FALSE, row.names=FALSE)
-# 予測オプションにNAが含まれていて、サブミットした時にフォーマットエラーで怒られてしまった（20140419）
+#ニアミス補正しない方を使ってみる
+test.plan.pred <- paste(test.4A.pred, test.4B.pred, test.4C.pred,
+                        test.4D.pred, test.4E.pred, test.4F.pred,
+                        test.4G.pred, sep="")
+
+answer.test$plan <- ifelse(test.isEve.pred[,2] > 0.6, test.plan.eve, test.plan.pred)
+
+# 直前見積もりしそうな方ではなく、直前見積もり使わなそうな人からアプローチしてみる
+# answer.test$plan <- ifelse(test.isEve.pred[,1] > 0.1, test.plan.pred, test.plan.eve)
+# すげーさがった
+
+# shopping_pt==2 が無いデータは一律、直前見積もりにしてみる。
+answer.test$plan <- ifelse(is.na(test$vA2), test.plan.eve, 
+                           ifelse(test.isEve.pred[,2] > 0.5, test.plan.eve, test.plan.pred))
 
 
+write.csv(answer.test, "answer_20140501_1.csv", quote=FALSE, row.names=FALSE)
 
 
